@@ -9,10 +9,9 @@ spec:
   capacity:
     storage: 5Gi
   accessModes:
-    - ReadWriteMany
-  nfs:
-    server: 192.168.0.92
-    path: "/mnt/accountDB"
+    - ReadWriteOnce
+  hostPath:
+    path: "/mnt/data"
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
@@ -21,7 +20,7 @@ metadata:
 spec:
   storageClassName: manual
   accessModes:
-    - ReadWriteMany
+    - ReadWriteOnce
   resources:
     requests:
       storage: 5Gi
