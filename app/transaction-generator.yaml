@@ -1,0 +1,50 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: transaction-generator
+  labels:
+    app: office-space
+spec:
+  ports:
+    - port: 8080
+      protocol: TCP
+      targetPort: 8080
+  selector:
+    app: office-space
+    tier: transaction
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: transaction-generator
+  labels:
+    app: office-space
+spec:
+  replicas: 2
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: office-space
+      tier: transaction
+  template:
+    metadata:
+      labels:
+        app: office-space
+        tier: transaction
+    spec:
+      containers:
+        - image: mosttiee/transaction-generator:latest
+          name: transaction-generator
+          ports:
+            - containerPort: 8080
+      tolerations:
+      - key: "node.kubernetes.io/not-ready"
+        operator: "Exists"
+        effect: "NoExecute"
+        tolerationSeconds: 10
+      - key: "node.kubernetes.io/unreachable"
+        operator: "Exists"
+        effect: "NoExecute"
+        tolerationSeconds: 10
