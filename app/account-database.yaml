@@ -49,6 +49,13 @@ spec:
           ports:
             - containerPort: 3306
               name: db
+          volumeMounts:
+          - name: mysql-persistent-storage
+            mountPath: /var/lib/mysql
+      volumes:
+      - name: mysql-persistent-storage
+        persistentVolumeClaim:
+          claimName: mysql-pv-claim
       tolerations:
       - key: "node.kubernetes.io/not-ready"
         operator: "Exists"
