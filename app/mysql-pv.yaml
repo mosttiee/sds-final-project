@@ -9,8 +9,9 @@ spec:
   capacity:
     storage: 5Gi
   accessModes:
-    - ReadWriteOnce
-  hostPath:
+    - ReadWriteMany
+  nfs:
+    server: 192.168.0.92
     path: "/mnt/accountDB"
 ---
 apiVersion: v1
@@ -20,7 +21,7 @@ metadata:
 spec:
   storageClassName: manual
   accessModes:
-    - ReadWriteOnce
+    - ReadWriteMany
   resources:
     requests:
       storage: 5Gi
