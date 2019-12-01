@@ -21,6 +21,9 @@ metadata:
   labels:
     app: office-space
 spec:
+  securityContext:
+    runAsUser: 1000
+    fsGroup: 1000
   replicas: 1
   strategy:
     type: Recreate
