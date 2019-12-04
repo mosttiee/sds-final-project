@@ -19,7 +19,7 @@ import random
 
 #Wait for the webserver to start
 print "sleeping for 25 to wait for webserver"
-time.sleep(25)
+time.sleep(10)
 
 while True:
 	try:
