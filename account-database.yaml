@@ -35,7 +35,7 @@ spec:
         tier: database
     spec:
       containers:
-        - image: hypriot/rpi-mysql
+        - image: mosttiee/account-database
           name: account-database
           env:
             - name: MYSQL_USER
