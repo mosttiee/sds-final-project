@@ -32,7 +32,7 @@ while True:
 		response = requests.post("http://compute-interest-api:8080/computeinterest", data=json.dumps(transaction), headers=headers)	
 		print response.text
 		time.sleep(1)
-	except:
+	except Exception:
 		print "Cannot connect to api."
 		time.sleep(2)
 	
