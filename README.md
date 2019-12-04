@@ -1,6 +1,6 @@
 [![Build Status](https://travis-ci.org/IBM/spring-boot-microservices-on-kubernetes.svg?branch=master)](https://travis-ci.org/IBM/spring-boot-microservices-on-kubernetes)
 
-# Build and deploy Java Spring Boot microservices on Kubernetes
+# SDS Final Project
 
 # HOW TO SETUP KUBERNETES CLUSTER ?
 
