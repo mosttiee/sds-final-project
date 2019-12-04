@@ -43,7 +43,7 @@ static domain_name_servers=8.8.8.8
 
 Where x.x.x is same as your device ip and y is the ip you want. I put 10,11,12 and 13 for each pi.
 
-## Docker and Kubernetes setup
+### Docker and Kubernetes setup
 1. The main choices for a container environment are Docker and cri-o. We will user Docker, as cri-o requires a fair amount of extra work to enable for Kubernetes. As cri-o is open source the community seems to be heading towards its use The following command installs docker and sets the right permission.
 ```
 curl -sSL get.docker.com | sh && \
@@ -93,6 +93,238 @@ sudo apt-get update
 ```
 sudo apt-get install -qy kubeadm
 ```
+
+## Preparing HAproxy load balancer
+1.Open ubuntu machine set the IP to “x.x.x.92”.
+2.Update the machine
+```
+sudo apt-get update
+sudo apt-get upgrade
+```
+3.Install HAProxy
+```
+sudo apt-get install haproxy
+```
+4. Configure HAProxy to load balance the traffic between the three Kubernetes master nodes.
+```
+sudo vim /etc/haproxy/haproxy.cfg
+```
+```
+global
+…
+default
+…
+frontend kubernetes
+bind x.x.x.92:6443
+option tcplog
+mode tcpdefault_backend kubernetes-master-nodes
+backend Kubernetes-master-nodes
+mode tcp
+balance roundrobin
+option tcp-check
+server k8s-master-1 x.x.x.90:6443 check fall 2 rise 1
+server k8s-master-2 x.x.x.91:6443 check fall 2 rise 1
+```
+5.Restart HAProxy.
+```
+sudo systemctl restart haproxy
+```
+
+## Generating the TLS certificates
+1. SSH to the “x.x.x.90” machine.
+2. Installing cfssl
+```
+wget https://pkg.cfssl.org/R1.2/cfssl_linux-amd64
+wget https://pkg.cfssl.org/R1.2/cfssljson_linux-amd64
+chmod +x cfssl*
+sudo mv cfssl_linux-amd64 /usr/local/bin/cfssl
+sudo mv cfssljson_linux-amd64 /usr/local/bin/cfssljson
+```
+3. Create the certificate authority configuration file.
+```
+$ vim ca-config.json
+{
+  "signing": {
+    "default": {
+      "expiry": "8760h"
+    },
+    "profiles": {
+      "kubernetes": {
+        "usages": ["signing", "key encipherment", "server auth", "client auth"],
+        "expiry": "8760h"
+      }
+    }
+  }
+}
+```
+4. Create the certificate authority signing request configuration file.
+```
+$ vim ca-csr.json
+{
+  "CN": "Kubernetes",
+  "key": {
+    "algo": "rsa",
+    "size": 2048
+  },
+  "names": [
+  {
+    "C": "IE",
+    "L": "Cork",
+    "O": "Kubernetes",
+    "OU": "CA",
+    "ST": "Cork Co."
+  }
+ ]
+}
+```
+5. Generate the certificate authority certificate and private key.
+```
+cfssl gencert -initca ca-csr.json | cfssljson -bare ca
+```
+
+## Preparing etcd clusters
+1. Create the certificate signing request configuration file
+```
+$ vim kubernetes-csr.json
+{
+  "CN": "kubernetes",
+  "key": {
+    "algo": "rsa",
+    "size": 2048
+  },
+  "names": [
+  {
+    "C": "IE",
+    "L": "Cork",
+    "O": "Kubernetes",
+    "OU": "Kubernetes",
+    "ST": "Cork Co."
+  }
+ ]
+}
+```
+2. Generate the certificate and private key.
+```
+$ cfssl gencert \
+-ca=ca.pem \
+-ca-key=ca-key.pem \
+-config=ca-config.json \
+-hostname=x.x.x.90, x.x.x.91, x.x.x.92,127.0.0.1,kubernetes.default \
+-profile=kubernetes kubernetes-csr.json | \
+cfssljson -bare kubernetes
+```
+3. Copy the certificate to each nodes
+```
+$ scp ca.pem kubernetes.pem kubernetes-key.pem [Username]@x.x.x.90:~
+$ scp ca.pem kubernetes.pem kubernetes-key.pem [Username]@x.x.x.91:~
+$ scp ca.pem kubernetes.pem kubernetes-key.pem [Username]@x.x.x.92:~
+```
+4. Installing etcd on each etcd node
+```
+$ sudo mkdir /etc/etcd /var/lib/etcd
+$ sudo mv ~/ca.pem ~/kubernetes.pem ~/kubernetes-key.pem /etc/etcd
+$ wget https://github.com/coreos/etcd/releases/download/v3.3.9/etcd-v3.3.9-linux-amd64.tar.gz
+$ tar xvzf etcd-v3.3.9-linux-amd64.tar.gz
+$ sudo mv etcd-v3.3.9-linux-amd64/etcd* /usr/local/bin/
+```
+5. Create an etcd systemd unit file on each etcd node.
+x.x.x.y is current machine ip address
+```
+$ sudo vim /etc/systemd/system/etcd.service
+[Unit]
+Description=etcd
+Documentation=https://github.com/coreos
+[Service]
+ExecStart=/usr/local/bin/etcd \
+  --name x.x.x.y \
+  --cert-file=/etc/etcd/kubernetes.pem \
+  --key-file=/etc/etcd/kubernetes-key.pem \
+  --peer-cert-file=/etc/etcd/kubernetes.pem \
+  --peer-key-file=/etc/etcd/kubernetes-key.pem \
+  --trusted-ca-file=/etc/etcd/ca.pem \
+  --peer-trusted-ca-file=/etc/etcd/ca.pem \
+  --peer-client-cert-auth \
+  --client-cert-auth \
+  --initial-advertise-peer-urls https://10.10.40.90:2380 \
+  --listen-peer-urls https://10.10.40.90:2380 \
+  --listen-client-urls https://10.10.40.90:2379,http://127.0.0.1:2379 \
+  --advertise-client-urls https://10.10.40.90:2379 \
+  --initial-cluster-token etcd-cluster-0 \
+  --initial-cluster 10.10.40.90=https://10.10.40.90:2380,10.10.40.91=https://10.10.40.91:2380,10.10.40.92=https://10.10.40.92:2380 \
+  --initial-cluster-state new \
+  --data-dir=/var/lib/etcd
+Restart=on-failure
+RestartSec=5
+
+
+[Install]
+WantedBy=multi-user.target
+```
+6. Reload the daemon configuration on each etcd node.
+```
+sudo systemctl daemon-reload
+```
+7. Enable etcd to start at boot time on each etcd node.
+```
+sudo systemctl enable etcd
+```
+8. Start etcd on each etcd node.
+```
+sudo systemctl start etcd
+```
+
+## Preparing the master nodes
+### Instlling Docker,kubeadm,kubelet and kubectl.
+1. Open ubuntu machine set the IP to “x.x.x.90” , “x.x.x.91”. and SSH to the machine.
+2. Get administrator privileges.
+```
+$ sudo su
+```
+3. Add the Docker repository key.
+```
+# curl -fsSL https://download.docker.com/linux/ubuntu/gpg | apt-key add -
+```
+4. Add the Docker repository
+```
+# add-apt-repository "deb https://download.docker.com/linux/$(. /etc/os-release; echo "$ID") $(lsb_release -cs) stable"
+```
+5. Update the list of packages.
+```
+# apt-get update
+```
+6. Install Docker 17.03.
+```
+# apt-get install -y docker-ce=$(apt-cache madison docker-ce | grep 17.03 | head -1 | awk '{print $3}')
+```
+7. Add the Google repository key.
+```
+# curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key add -
+```
+8. Add the Google repository.
+```
+# vim /etc/apt/sources.list.d/kubernetes.list
+```
+Add the following
+```
+deb http://apt.kubernetes.io kubernetes-xenial main
+```
+9. Update the list of packages.
+```
+# apt-get update
+```
+10. Install kubelet,kubeadm and kubectl.
+```
+# apt-get install kubelet kubeadm kubectl
+```
+11. Disable the swap.
+```
+# swapoff -a
+```
+```
+# sed -i '/ swap / s/^/#/' /etc/fstab
+```
+
+
 
 *Read this in other languages: [한국어](README-ko.md)、[中国](README-cn.md).*
 
