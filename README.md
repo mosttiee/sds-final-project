@@ -2,6 +2,50 @@
 
 # Build and deploy Java Spring Boot microservices on Kubernetes
 
+# HOW TO SETUP KUBERNETES CLUSTER ?
+
+## What you need (must haves)
+- 1xWiFi Router TP-Link TL WR841N
+- 4xRaspberry Pi B+ (rasbian stretch lite for worker node)
+- 4xSD Card
+- 5xEthernet Cables
+- 3xNotebook (ubuntu 18.04 for 2xmaster node and 1xHAproxy)
+
+## Preparing the worker nodes
+### Setup raspberry pi and set static IP
+1.Download Etcher from "https://www.balena.io/etcher/" for burn the os image onto the microSD card.
+2.Download image file for Raspberry Pi "http://downloads.raspberrypi.org/raspbian_lite/images/raspbian_lite-2019-04-09/2019-04-08-raspbian-stretch-lite.zip" (we use rasbian stretch lite)
+3.Insert microSD to your computer. Open program "balenaEtcher" select image "rasbian stretch lite" and click "Flash".
+4.Put an empty file named ‘ssh’ (the file has no file extension or any content in) inside the SD card. This will allow us to ssh into the device out of the box. 
+5.Insert the SD cards in the raspberry pi and power on the pis. And connect pi to the router for check IP.
+6.Connect to your pi by command (x.x.x.x is IP of pi)
+```
+$ ssh pi@x.x.x.x
+```
+7.Type in 
+```
+$ raspi-config
+``` 
+It is a built in raspberry pi tool to configure the device.
+
+8.Go to Network Options > Hostname. And change the hostname to anything you want. I named mine k8s-node-1, k8s-node-2, k8s-node-3 and k8s-node-4.
+9.We will give our device a static ip so it keeps the ip between reboots. 
+```
+$ cat >> /etc/dhcpcd.conf
+```
+10.Paste the following code block 
+```
+interface eth0
+static ip_address=x.x.x.y/24
+static routers=x.x.x.1
+static domain_name_servers=8.8.8.8
+```
+
+Where x.x.x is same as your device ip and y is the ip you want. I put 10,11,12 and 13 for each pi.
+
+## Docker and Kubernetes setup
+
+
 *Read this in other languages: [한국어](README-ko.md)、[中国](README-cn.md).*
 
 Spring Boot is one of the popular Java microservices framework. Spring Cloud has a rich set of well integrated Java libraries to address runtime concerns as part of the Java application stack, and Kubernetes provides a rich featureset to run polyglot microservices. Together these technologies complement each other and make a great platform for Spring Boot applications.
