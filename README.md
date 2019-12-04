@@ -44,7 +44,55 @@ static domain_name_servers=8.8.8.8
 Where x.x.x is same as your device ip and y is the ip you want. I put 10,11,12 and 13 for each pi.
 
 ## Docker and Kubernetes setup
+1. The main choices for a container environment are Docker and cri-o. We will user Docker, as cri-o requires a fair amount of extra work to enable for Kubernetes. As cri-o is open source the community seems to be heading towards its use The following command installs docker and sets the right permission.
+```
+curl -sSL get.docker.com | sh && \
+sudo usermod pi -aG docker && \
+newgrp docker
+```
+2. We need to then disable swap. Kubernetes requires swap to be disabled.
+```
+sudo dphys-swapfile swapoff && \
+sudo dphys-swapfile uninstall && \
+sudo update-rc.d dphys-swapfile remove
+```
+We can check swap disable was a success by the following command returning empty
+```
+sudo swapon --summary
+```
+3. Next we edit the /boot/cmdline.txt file. Add the following in the end of the file. This needs to be in the same line as all the other text in the file. Do not create a new file.
+```
+nano /boot/cmdline.txt
+```
 
+```
+cgroup_enable=cpuset cgroup_memory=1 cgroup_enable=memory
+```
+4. Reboot with 
+```
+sudo reboot
+```
+5. SSH in again. Edit the following file
+```
+nano /etc/apt/sources.list.d/kubernetes.list
+```
+add the following in the file
+```
+deb http://apt.kubernetes.io/ kubernetes-xenial main
+```
+add the key
+```
+curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key add -
+```
+If it works, it will output OK
+6. Update with new repo, which will download new repo information.
+```
+sudo apt-get update
+```
+7. Install kubeadm it will also install kubectl
+```
+sudo apt-get install -qy kubeadm
+```
 
 *Read this in other languages: [한국어](README-ko.md)、[中国](README-cn.md).*
 
