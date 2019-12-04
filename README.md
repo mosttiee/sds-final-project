@@ -1,4 +1,3 @@
-[![Build Status](https://travis-ci.org/IBM/spring-boot-microservices-on-kubernetes.svg?branch=master)](https://travis-ci.org/IBM/spring-boot-microservices-on-kubernetes)
 
 # SDS Final Project
 
@@ -60,11 +59,11 @@ We can check swap disable was a success by the following command returning empty
 ```
 sudo swapon --summary
 ```
-3. Next we edit the /boot/cmdline.txt file. Add the following in the end of the file. This needs to be in the same line as all the other text in the file. Do not create a new file.
+3. Next we edit the /boot/cmdline.txt file.
 ```
 nano /boot/cmdline.txt
 ```
-
+Add the following in the end of the file. This needs to be in the same line as all the other text in the file. Do not create a new file.
 ```
 cgroup_enable=cpuset cgroup_memory=1 cgroup_enable=memory
 ```
