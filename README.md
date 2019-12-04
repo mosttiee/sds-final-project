@@ -379,3 +379,9 @@ sudo kubeadm join --token <token> <master-node-ip>:6443 --discovery-token-ca-cer
 ```
 kubectl get nodes
 ```
+
+# HOW TO DEPLOY APPLICATION ?
+Run this command.
+```
+./deploy.sh
+```
