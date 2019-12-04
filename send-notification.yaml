@@ -21,7 +21,7 @@ metadata:
   labels:
     app: office-space
 spec:
-  replicas: 2
+  replicas: 4
   strategy:
     type: Recreate
   selector:
