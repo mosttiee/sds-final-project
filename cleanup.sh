@@ -12,10 +12,10 @@ kubectl delete service/compute-interest-api
 echo "Deleting Account summary deployment."
 kubectl delete deployment.apps/account-summary 
 echo "Deleting Account summary service."
-kubectl service/account-summary
+kubectl delete service/account-summary
 
 echo "Deleting Transaction generator deployment."
 kubectl delete deployment.apps/transaction-generator
 echo "Deleting Transaction generator service."
-kubectl service/transaction-generator
+kubectl delete service/transaction-generator
 echo "Finish!!"
